@@ -94,31 +94,31 @@ class DynamicThresholdQBD:
         # --- B_plus1 の構築 (レベル0 -> 1) ---
         B_plus1[self._idx0(0), self._idx(1, 0)] = self.lam1
         for n2 in range(1, self.K + 1):
-            B_plus1[self._idx0(2, n2), self._idx(2, n2)] = self.lam1
+            B_plus1[self._idx0(n2), self._idx(2, n2)] = self.lam1
 
         # --- B_minus1 の構築 (レベル1 -> 0) ---
-        B_minus1[self._idx(1, 0), self._idx0(0, 0)] = self.mu1_rand
+        B_minus1[self._idx(1, 0), self._idx0(0)] = self.mu1_rand
         for n2 in range(1, self.K + 1):
             if n2 <= self.m:
-                B_minus1[self._idx(1, n2), self._idx0(2, n2)] = self.mu1_rand
+                B_minus1[self._idx(1, n2), self._idx0(n2)] = self.mu1_rand
             else:
-                B_minus1[self._idx(1, n2), self._idx0(2, n2)] = self.mu1_zip
+                B_minus1[self._idx(1, n2), self._idx0(n2)] = self.mu1_zip
 
         # --- B0 の非対角成分の構築 (レベル0内での遷移) ---
         for n2 in range(self.K + 1):
             # 1. 合流車線への到着
             if n2 < self.K:
                 if n2 == 0:
-                    B0[self._idx0(0, 0), self._idx0(2, 1)] = self.lam2
+                    B0[self._idx0(0), self._idx0(1)] = self.lam2
                 else:
-                    B0[self._idx0(2, n2), self._idx0(2, n2 + 1)] = self.lam2
-            
+                    B0[self._idx0(n2), self._idx0(n2 + 1)] = self.lam2
+                    
             # 2. 合流車線のサービス完了
             if n2 >= 1:
                 if n2 <= self.m:
-                    B0[self._idx0(2, n2), self._idx0(2, n2 - 1) if n2 > 1 else self._idx0(0, 0)] = self.mu2_rand
+                    B0[self._idx0(n2), self._idx0(n2 - 1) if n2 > 1 else self._idx0(0)] = self.mu2_rand
                 else:
-                    B0[self._idx0(2, n2), self._idx0(2, n2 - 1)] = self.mu2_zip
+                    B0[self._idx0(n2), self._idx0(n2 - 1)] = self.mu2_zip
 
         # --- B0 の対角成分の構築 (各行の和が0になるように設定) ---
         for i in range(size0):
