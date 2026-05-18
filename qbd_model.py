@@ -27,8 +27,12 @@ class DynamicThresholdQBD:
             return 0  # (1, 0)
         return 2 * n2 - 1 if s == 1 else 2 * n2
 
-    def _idx0(self, s, n2):
-        """レベル0における状態 (s, n2) のインデックスを返す"""
+    def _idx0(self, n2):
+        """
+        レベル0における状態のインデックスを返す。
+        レベル0（本線が空）のとき、サーバーが本線を処理する状態(S=1)は存在しない。
+        n2=0 のときはシステム全体が空(アイドル状態 S=0)となる。
+        """
         if n2 == 0:
             return 0  # (0, 0)
         return n2     # (2, n2)
@@ -88,7 +92,7 @@ class DynamicThresholdQBD:
         B0 = np.zeros((size0, size0))
 
         # --- B_plus1 の構築 (レベル0 -> 1) ---
-        B_plus1[self._idx0(0, 0), self._idx(1, 0)] = self.lam1
+        B_plus1[self._idx0(0), self._idx(1, 0)] = self.lam1
         for n2 in range(1, self.K + 1):
             B_plus1[self._idx0(2, n2), self._idx(2, n2)] = self.lam1
 
@@ -122,52 +126,36 @@ class DynamicThresholdQBD:
             B0[i, i] = -out_rate
 
         return B_plus1, B_minus1, B0
-
-    def solve_R(self, tol=1e-8, max_iter=1000, verbose=False):
+    
+    def solve_R(self, tol=1e-8, max_iter=10000, verbose=False):
         """
         公比行列 R（最小の非負解）を求める。
 
-        解く二次行列方程式:
+        解く二次行列方程式 (論文の式3.12):
+            Q_{+1} + R Q_0 + R^2 Q_{-1} = 0
 
-            Q_minus1 + Q0 * R + Q_plus1 * R^2 = 0
-
-        単純な固定点反復で近似解を求めます:
-
-            R_{k+1} = - inv(Q0) * (Q_minus1 + Q_plus1 * R_k^2)
-
-        引数:
-        - tol: 収束許容誤差（無限ノルム）
-        - max_iter: 最大反復回数
-        - verbose: True のとき進捗を表示（50回ごと）
-
-        戻り値:
-        - R: numpy.ndarray（計算された公比行列）
-
-        注: これは基本的な固定点法です。大規模問題や高速収束が
-        必要な場合は Logarithmic Reduction（doubling）アルゴリズムの
-        導入を検討してください。
+        反復式 (論文の式3.13):
+            R_{k+1} = (Q_{+1} + R_k^2 Q_{-1}) (-Q_0)^{-1}
         """
-        A_plus = self.Q_plus1
-        A_minus = self.Q_minus1
-        A0 = self.Q0
+        Q_plus1 = self.Q_plus1
+        Q_minus1 = self.Q_minus1
+        Q0 = self.Q0
 
-        n = A0.shape[0]
+        n = Q0.shape[0]
         R = np.zeros((n, n))
+        
+        # (-Q_0) の逆行列を事前計算
+        inv_neg_Q0 = np.linalg.inv(-Q0)
 
         for it in range(max_iter):
             R2 = R @ R
-            # 右辺: A0 * R_{k+1} = -(A_minus + A_plus * R_k^2)
-            rhs = -(A_minus + A_plus @ R2)
-            try:
-                R_new = np.linalg.solve(A0, rhs)
-            except np.linalg.LinAlgError:
-                # A0 が特異または数値的に悪条件の場合は擬似逆行列を使う
-                R_new = -np.linalg.pinv(A0) @ (A_minus + A_plus @ R2)
+            # R_{k+1} = (Q_{+1} + R_k^2 Q_{-1}) * (-Q_0)^{-1}
+            R_new = (Q_plus1 + R2 @ Q_minus1) @ inv_neg_Q0
 
             err = np.max(np.abs(R_new - R))
             R = R_new
 
-            if verbose and (it % 50 == 0 or err < tol):
+            if verbose and (it % 100 == 0 or err < tol):
                 print(f"solve_R iter {it}, err={err}")
 
             if err < tol:
@@ -177,7 +165,6 @@ class DynamicThresholdQBD:
 
         raise RuntimeError(f"solve_R did not converge in {max_iter} iterations (last err={err})")
 
-# 動作確認用コード
 if __name__ == "__main__":
     # K=5, m=3, p=0.8 としたテスト
     model = DynamicThresholdQBD(lam1=10, lam2=5, mu1_rand=40, mu2_rand=30, mu1_zip=30, mu2_zip=20, K=5, m=3, p=0.8)
