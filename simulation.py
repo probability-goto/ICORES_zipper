@@ -11,7 +11,6 @@ service-rate selection, merge-capacity K, warmup by events, time-average via are
 """
 from __future__ import annotations
 
-import heapq
 import random
 from typing import Tuple, Optional
 
@@ -51,19 +50,6 @@ def simulate(
     N2 = 0  # merge
     S = 0  # server state: 0 idle, 1 main, 2 merge
 
-    # event calendar: tuples (time, seq, event_type, event_data)
-    ev_heap = []
-    seq = 0
-
-    def push_event(time: float, ev_type: int, ev_data=None) -> None:
-        nonlocal seq
-        heapq.heappush(ev_heap, (time, seq, ev_type, ev_data))
-        seq += 1
-
-    # schedule initial arrivals
-    push_event(rng.expovariate(lam1), ARRIVAL_MAIN)
-    push_event(rng.expovariate(lam2), ARRIVAL_MERGE)
-
     # bookkeeping
     last_time = 0.0
     processed = 0
@@ -80,101 +66,100 @@ def simulate(
     # For ModeB we need to know which lane was just served
     last_served = None
 
-    # main loop
+    # Gillespie loop (Markov jump process)
     while processed < max_events:
-        time, _s, ev_type, ev_data = heapq.heappop(ev_heap)
+        # 1) compute current rates
+        rate_arr_main = lam1
+        rate_arr_merge = lam2
+        rate_serv_main = (mu1_rand if N2 <= m else mu1_zip) if S == 1 else 0.0
+        rate_serv_merge = (mu2_rand if N2 <= m else mu2_zip) if S == 2 else 0.0
 
-        # advance time and accumulate area if collecting
-        delta = time - last_time
+        total_rate = rate_arr_main + rate_arr_merge + rate_serv_main + rate_serv_merge
+
+        # if no events are possible, stop
+        if total_rate <= 0.0:
+            break
+
+        # 2) time to next event
+        dt = rng.expovariate(total_rate)
+
+        # accumulate area under curve during dt if collecting
         if collecting:
-            area_N1 += N1 * delta
-            area_N2 += N2 * delta
-        last_time = time
+            area_N1 += N1 * dt
+            area_N2 += N2 * dt
 
-        if ev_type == ARRIVAL_MAIN:
-            # schedule next main arrival
-            push_event(time + rng.expovariate(lam1), ARRIVAL_MAIN)
+        last_time += dt
 
-            # main arrival always accepted (no capacity)
+        # 3) choose which event occurs
+        r = rng.random() * total_rate
+        threshold = rate_arr_main
+        if r < threshold:
+            # main arrival
             N1 += 1
-
-            # if server idle, start service on main immediately
+            # arrival counts for merge arrivals unaffected
             if S == 0:
                 S = 1
                 last_served = 1
-                # choose service rate depending on N2
-                rate = mu1_rand if N2 <= m else mu1_zip
-                push_event(time + rng.expovariate(rate), SERVICE_COMPLETION, 1)
-
-        elif ev_type == ARRIVAL_MERGE:
-            # schedule next merge arrival
-            push_event(time + rng.expovariate(lam2), ARRIVAL_MERGE)
-
-            # blocked if N2 == K
-            if N2 >= K:
-                if collecting:
-                    blocked_after_warmup += 1
-                    merge_arrivals_after_warmup += 1
-            else:
-                N2 += 1
-                if collecting:
-                    merge_arrivals_after_warmup += 1
-
-                # if server idle, start service on merge immediately
-                if S == 0:
-                    S = 2
-                    last_served = 2
-                    rate = mu2_rand if N2 <= m else mu2_zip
-                    push_event(time + rng.expovariate(rate), SERVICE_COMPLETION, 2)
-
-        elif ev_type == SERVICE_COMPLETION:
-            lane = ev_data
-
-            # decrement the served queue
-            if lane == 1:
-                if N1 > 0:
-                    N1 -= 1
-            else:
-                if N2 > 0:
-                    N2 -= 1
-
-            # determine next server decision using the specified priority rules
-            if N1 == 0 and N2 == 0:
-                S = 0
-            elif N1 == 0 and N2 > 0:
-                S = 2
-                last_served = 2
-                rate = mu2_rand if N2 <= m else mu2_zip
-                push_event(time + rng.expovariate(rate), SERVICE_COMPLETION, 2)
-            elif N2 == 0 and N1 > 0:
-                S = 1
-                last_served = 1
-                rate = mu1_rand if N2 <= m else mu1_zip
-                push_event(time + rng.expovariate(rate), SERVICE_COMPLETION, 1)
-            elif 0 < N2 <= m and N1 > 0:
-                # Mode A: random choice with prob p to serve main
-                if rng.random() < p:
-                    S = 1
-                    last_served = 1
-                    rate = mu1_rand if N2 <= m else mu1_zip
-                    push_event(time + rng.expovariate(rate), SERVICE_COMPLETION, 1)
+        else:
+            threshold += rate_arr_merge
+            if r < threshold:
+                # merge arrival
+                if N2 >= K:
+                    if collecting:
+                        blocked_after_warmup += 1
+                        merge_arrivals_after_warmup += 1
                 else:
-                    S = 2
-                    last_served = 2
-                    rate = mu2_rand if N2 <= m else mu2_zip
-                    push_event(time + rng.expovariate(rate), SERVICE_COMPLETION, 2)
-            elif N2 > m and N1 > 0:
-                # Mode B: must switch to the opposite lane from the one just served
+                    N2 += 1
+                    if collecting:
+                        merge_arrivals_after_warmup += 1
+                    if S == 0:
+                        S = 2
+                        last_served = 2
+            else:
+                # service completion
+                threshold += rate_serv_main
+                # determine which service completed (only non-zero service rates chosen)
+                # prefer main service if r falls into service main range
+                if r < threshold:
+                    lane = 1
+                else:
+                    lane = 2
+
+                prev_N2 = N2
+                # decrement the served queue
                 if lane == 1:
+                    if N1 > 0:
+                        N1 -= 1
+                else:
+                    if N2 > 0:
+                        N2 -= 1
+
+                # determine next server decision using priority rules
+                # (Mode A/B classification uses prev_N2 per specification)
+                if N1 == 0 and N2 == 0:
+                    S = 0
+                elif N1 == 0 and N2 > 0:
                     S = 2
                     last_served = 2
-                    rate = mu2_rand if N2 <= m else mu2_zip
-                    push_event(time + rng.expovariate(rate), SERVICE_COMPLETION, 2)
-                else:
+                elif N2 == 0 and N1 > 0:
                     S = 1
                     last_served = 1
-                    rate = mu1_rand if N2 <= m else mu1_zip
-                    push_event(time + rng.expovariate(rate), SERVICE_COMPLETION, 1)
+                elif 0 < prev_N2 <= m and N1 > 0:
+                    # Mode A: random choice using probability p (use prev_N2 for mode decision)
+                    if rng.random() < p:
+                        S = 1
+                        last_served = 1
+                    else:
+                        S = 2
+                        last_served = 2
+                elif prev_N2 > m and N1 > 0:
+                    # Mode B: must switch to the opposite lane from the one just served
+                    if lane == 1:
+                        S = 2
+                        last_served = 2
+                    else:
+                        S = 1
+                        last_served = 1
 
         processed += 1
 
@@ -202,7 +187,6 @@ def simulate(
 
 
 if __name__ == "__main__":
-    # Quick example run (smaller scale). For full accuracy run simulate(...) with
     # larger `max_events` (e.g. 1_000_000) and `warmup_events` (e.g. 100_000).
     params = dict(
         lam1=10.0,
