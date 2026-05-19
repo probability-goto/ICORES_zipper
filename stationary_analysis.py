@@ -81,6 +81,64 @@ def compute_stationary(model: DynamicThresholdQBD, R: np.ndarray = None, tol=1e-
     return pi0, pi1, denom
 
 
+def calculate_performance_measures(model: DynamicThresholdQBD, R: np.ndarray, pi0: np.ndarray, pi1: np.ndarray):
+        """定常分布から性能指標を計算する。
+
+        返り値:
+            - E_L_main: 本線の平均系内客数 E[L_main]
+            - E_L_merge: 合流車線の平均系内客数 E[L_merge]
+            - P_block: 合流車線が満杯である確率 P_block
+
+        実装メモ:
+            - (I - R)^{-1} や (I - R)^{-2} の計算は `np.linalg.solve` を用いて
+                数値的安定性を高める（逆行列を直接計算しない）。
+            - フェーズの並び順は `qbd_model.py` に従う。
+        """
+
+        n0 = model.num_phases_0
+        n = model.num_phases
+
+        # 基本行列
+        I = np.eye(n)
+        A = I - R
+
+        # (I - R)^{-1} を RHS を指定して求める（解法を2回呼んで (I-R)^{-2} を得る）
+        ones = np.ones(n)
+        # solve(A, ones) = (I-R)^{-1} * ones
+        y = np.linalg.solve(A, ones)
+        # solve(A, y) = (I-R)^{-2} * ones
+        z = np.linalg.solve(A, y)
+
+        # E[L_main] = pi1 * (I - R)^{-2} * e
+        E_L_main = float(pi1 @ z)
+
+        # 合流車線の期待値 E[L_merge]
+        # レベル0の n2 値配列: (0,0), (2,1), (2,2), ..., (2,K)
+        n2_level0 = np.arange(0, n0)
+
+        # レベル1以上のフェーズごとの n2 値配列: (1,0), (1,1), (2,1), (1,2), (2,2), ...
+        n2_level1 = np.empty(n, dtype=int)
+        n2_level1[0] = 0
+        idx = 1
+        for val in range(1, model.K + 1):
+                n2_level1[idx] = val
+                idx += 1
+                n2_level1[idx] = val
+                idx += 1
+
+        # レベル1以上の各位相における総確率ベクトル p_levels = pi1 * (I - R)^{-1}
+        # 数値的に安定に求めるため、(I-R)^T x = pi1^T を解き x^T = pi1 * (I-R)^{-1}
+        p_levels = np.linalg.solve(A.T, pi1).T
+
+        # E[L_merge] = sum_{level0} pi0[i] * n2_level0[i] + sum_{level>=1 phases} p_levels[j] * n2_level1[j]
+        E_L_merge = float(np.dot(pi0, n2_level0) + np.dot(p_levels, n2_level1))
+
+        # ブロッキング確率: レベル0 の末尾要素 + レベル1以上の n2=K に対応する末尾2要素の和
+        P_block = float(pi0[-1] + np.sum(p_levels[-2:]))
+
+        return E_L_main, E_L_merge, P_block
+
+
 if __name__ == "__main__":
     # Example run and quick checks
     model = DynamicThresholdQBD(
@@ -104,3 +162,11 @@ if __name__ == "__main__":
 
     print("pi0 (length {}):".format(pi0.size), pi0)
     print("pi1 (length {}):".format(pi1.size), pi1)
+
+    # 性能指標を計算して表示
+    E_L_main, E_L_merge, P_block = calculate_performance_measures(model, R, pi0, pi1)
+    print()
+    print("Performance measures:")
+    print("E[L_main]:", E_L_main)
+    print("E[L_merge]:", E_L_merge)
+    print("P_block:", P_block)
