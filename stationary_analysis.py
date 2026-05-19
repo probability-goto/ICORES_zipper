@@ -41,7 +41,7 @@ def compute_stationary(model: DynamicThresholdQBD, R: np.ndarray = None, tol=1e-
     # null_space が存在しない、または空だった場合は SVD によるフォールバック
     if ns is None or ns.size == 0:
         # SVD を使って最小特異値に対応する右特異ベクトルを取る
-        U, s, Vt = np.linalg.svd(M.T)
+        U, s, Vt = np.linalg.svd(M.T, full_matrices=False)
         ns = Vt.T[:, -1:]
 
     if ns.size == 0:
@@ -51,8 +51,8 @@ def compute_stationary(model: DynamicThresholdQBD, R: np.ndarray = None, tol=1e-
     # 微小な虚部が混じっている場合は実部に丸める
     x = np.real_if_close(x, tol=1000)
 
-    # 数値的にすべて非正の場合は符号を反転して正の成分を持たせる
-    if np.all(x <= 0):
+    # 合計値が負であれば反転して正の成分を持たせる
+    if np.sum(x) < 0:
         x = -x
 
     n0 = B0.shape[0]
