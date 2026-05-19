@@ -63,12 +63,13 @@ def plot_6_theory_vs_sim(
     # --- Left column: lambda1 sweeps for each K ---
     for row, K in enumerate(Ks):
         ax = axes[row, 0]
-        # compute lambda1 grid same as plot_results.py
+        # compute lambda1 grid same as plot_results.py, ensure at least 30 theory points
         lambda1_max = compute_lambda1_max_for_params(lambda2_fixed_for_1_3, K)
+        num_theory_points = max(30, num_sim_points)
         if lambda1_max <= 0:
-            lambda1_vals = np.linspace(0.1, 10, 20)
+            lambda1_vals = np.linspace(0.1, 10, num_theory_points)
         else:
-            lambda1_vals = np.linspace(0.1, max(0.5, 0.98 * lambda1_max), 20)
+            lambda1_vals = np.linspace(0.1, max(0.5, 0.98 * lambda1_max), num_theory_points)
 
         E_main_vals = []
         E_merge_vals = []
@@ -101,6 +102,8 @@ def plot_6_theory_vs_sim(
             # unique preserves order after sorting indices
             unique_idxs = np.unique(idxs)
             sim_points = [float(lambda1_vals[i]) for i in unique_idxs]
+        # report how many theory/sim points will be used for this subplot
+        print(f"[LEFT] K={K}, lambda2={lambda2_fixed_for_1_3}: theory_points={len(lambda1_vals)}, sim_points={len(sim_points)}")
         sim_res = run_sim_for_points(sim_points, lambda2_fixed_for_1_3, 'lambda1', K, None, P, sim_max_events, sim_warmup, seed_base + row * 10)
 
         # overlay simulation markers
@@ -112,7 +115,9 @@ def plot_6_theory_vs_sim(
             ax.legend()
 
     # --- Right column: lambda2 sweeps for each K ---
-    lambda2_vals = np.linspace(1, 30, 30)
+    # ensure at least 30 theory points for lambda2 sweeps
+    num_theory_points2 = max(30, num_sim_points)
+    lambda2_vals = np.linspace(1, 30, num_theory_points2)
     for row, K in enumerate(Ks):
         ax = axes[row, 1]
         E_main_vals = []
@@ -143,6 +148,8 @@ def plot_6_theory_vs_sim(
             idxs = np.linspace(0, len(lambda2_vals) - 1, n_pts, dtype=int)
             unique_idxs = np.unique(idxs)
             sim_points = [float(lambda2_vals[i]) for i in unique_idxs]
+        # report how many theory/sim points will be used for this subplot
+        print(f"[RIGHT] K={K}, lambda1={lambda1_fixed_for_4_6}: theory_points={len(lambda2_vals)}, sim_points={len(sim_points)}")
         sim_res = run_sim_for_points(sim_points, lambda1_fixed_for_4_6, 'lambda2', K, None, P, sim_max_events, sim_warmup, seed_base + row * 10)
 
         for j, lam2 in enumerate(sim_points):
