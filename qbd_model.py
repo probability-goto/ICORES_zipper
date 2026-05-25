@@ -69,7 +69,10 @@ class DynamicThresholdQBD:
             # 3. 合流車線のサービス完了 (Q0に記述)
             if n2 >= 1:
                 if n2 == 1:
-                    Q0[self._idx(2, 1), self._idx(1, 0)] = self.mu2_rand
+                    # n2=1→0: 合流車線が空になるためワークコンサービング（確率1で本線へ）
+                    # レートはモードに依存: モードA(n2<=m)なら mu2_rand, モードB(n2>m=0)なら mu2_zip
+                    rate = self.mu2_rand if n2 <= self.m else self.mu2_zip
+                    Q0[self._idx(2, 1), self._idx(1, 0)] = rate
                 elif 2 <= n2 <= self.m:
                     Q0[self._idx(2, n2), self._idx(1, n2 - 1)] = self.p * self.mu2_rand
                     Q0[self._idx(2, n2), self._idx(2, n2 - 1)] = (1 - self.p) * self.mu2_rand
