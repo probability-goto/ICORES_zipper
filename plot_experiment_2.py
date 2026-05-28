@@ -64,7 +64,7 @@ def compute_all(K_values, lam2_values, m_specs):
             K_list, lam1_max_list = [], []
 
             for K in K_values:
-                # m=5 は K >= 5 のみ有効（K < 5 はスキップ）
+                # m>Kの組み合わせをスキップ
                 actual_m = K if m_val == "K" else m_val
                 if actual_m > K:
                     pbar.update(1)
