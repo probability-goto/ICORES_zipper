@@ -1,8 +1,40 @@
+import warnings
 import numpy as np
 from qbd_model import DynamicThresholdQBD
 
+try:
+    from scipy.linalg import null_space as scipy_null_space
+except ImportError:
+    scipy_null_space = None
 
-def compute_exact_lambda1_max(model: DynamicThresholdQBD) -> float:
+
+def _residual(eta: np.ndarray, A: np.ndarray) -> float:
+    return float(np.max(np.abs(eta @ A)))
+
+
+def _normalize(v: np.ndarray) -> np.ndarray:
+    """正規化: 符号を正方向に揃え sum(eta)=1 にする。"""
+    if np.sum(v) < 0:
+        v = -v
+    return v / np.sum(v)
+
+
+def _solve_via_null_space(A: np.ndarray) -> np.ndarray:
+    """scipy null_space (SVD ベース) で eta を求める。"""
+    ns = scipy_null_space(A.T)
+    if ns.shape[1] == 0:
+        raise RuntimeError("null_space returned empty basis")
+    return _normalize(ns[:, 0].real)
+
+
+def _solve_via_lstsq(A_T: np.ndarray, b: np.ndarray, A: np.ndarray) -> np.ndarray:
+    """lstsq で最小二乗解を求め、正規化する。"""
+    eta, _, _, _ = np.linalg.lstsq(A_T, b, rcond=None)
+    # lstsq の解は sum=1 条件を満たすが、残差が大きい場合は再正規化する
+    return _normalize(eta)
+
+
+def compute_exact_lambda1_max(model: DynamicThresholdQBD, tol: float = 1e-8) -> float:
     """
     行列計算によって定常分布 eta を求め、安定限界 lambda_{1,max} を計算する。
 
@@ -10,30 +42,73 @@ def compute_exact_lambda1_max(model: DynamicThresholdQBD) -> float:
     連立一次方程式として直接解き、
         lambda_{1,max} = eta @ Q_{-1} @ e
     を返す。
+
+    Parameters
+    ----------
+    model : DynamicThresholdQBD
+    tol : float
+        残差 |eta @ A|_inf の許容閾値（デフォルト 1e-8）。
+        超えた場合はフォールバック手法で再計算し、警告を発する。
     """
     # 1. フェーズ遷移行列 A の構築
     A = model.Q0 + model.Q_plus1 + model.Q_minus1
     n = A.shape[0]
 
     # 2. eta A = 0, eta e = 1 を線形系に変換
-    # A^T eta^T = 0 の形にするため転置を取る
     A_T = A.T.copy()
-
-    # 最後の列（A^T の最後の行）を正規化条件 sum(eta) = 1 に置き換える
-    A_T[-1, :] = 1.0
-
-    # 右辺: 最後の要素だけ 1
+    A_T[-1, :] = 1.0          # 最後の行を正規化条件に置換
     b = np.zeros(n)
     b[-1] = 1.0
 
-    # 3. 連立方程式を解いて eta を求める
+    # 3. 主手法: np.linalg.solve（高速・直接法）
     eta = np.linalg.solve(A_T, b)
+    res = _residual(eta, A)
 
-    # 4. lambda_{1,max} = eta @ Q_{-1} @ e
+    # 4. 残差チェック → 閾値超えならフォールバック
+    if res > tol:
+        warnings.warn(
+            f"compute_exact_lambda1_max: numerical precision warning "
+            f"(|eta @ A|_inf = {res:.3e} > tol={tol:.3e}, n={n}). "
+            f"Trying fallback solvers.",
+            stacklevel=2,
+        )
+
+        candidates: list[tuple[float, np.ndarray, str]] = [(res, eta, "solve")]
+
+        # フォールバック 1: scipy null_space（SVD ベース、最も安定）
+        if scipy_null_space is not None:
+            try:
+                eta_ns = _solve_via_null_space(A)
+                candidates.append((_residual(eta_ns, A), eta_ns, "null_space"))
+            except Exception:
+                pass
+
+        # フォールバック 2: np.linalg.lstsq（最小二乗、scipy なし環境向け）
+        try:
+            eta_ls = _solve_via_lstsq(A_T, b, A)
+            candidates.append((_residual(eta_ls, A), eta_ls, "lstsq"))
+        except Exception:
+            pass
+
+        best_res, eta, best_method = min(candidates, key=lambda x: x[0])
+
+        if best_res > tol:
+            warnings.warn(
+                f"compute_exact_lambda1_max: all solvers exceeded tol "
+                f"(best |eta @ A|_inf = {best_res:.3e} via {best_method}). "
+                f"Result may be inaccurate.",
+                stacklevel=2,
+            )
+        else:
+            warnings.warn(
+                f"compute_exact_lambda1_max: fallback '{best_method}' succeeded "
+                f"(|eta @ A|_inf = {best_res:.3e}).",
+                stacklevel=2,
+            )
+
+    # 5. lambda_{1,max} = eta @ Q_{-1} @ e
     ones = np.ones(n)
-    lambda1_max = float(eta @ model.Q_minus1 @ ones)
-
-    return lambda1_max
+    return float(eta @ model.Q_minus1 @ ones)
 
 
 def _spectral_radius_R(model: DynamicThresholdQBD) -> float:
