@@ -1,16 +1,18 @@
 """
-実験群4：先行研究との比較によるトレードオフ完全
+実験群4：先行研究との比較によるトレードオフ完全突破の証明
 
 横軸 K（5〜30）、縦軸 λ1 の空間において、
   - 最大スループット λ_{1,max} の安定限界（黒太線）
-  - ブロッキング確率 P_block の等高線（1%, 5%, 10%, 15%, 20%）
+  - ブロッキング確率 P_block の等高線
 を描画する。
 
-  左サブプロット : m = 0（先行研究 ICORES 2026 の再現）
-  右サブプロット : m = int(0.6 * K)（提案手法）
+3つの制御戦略を比較：
+  左サブプロット  : m = 0（純粋ファスナー・先行研究）
+  中央サブプロット: m = int(0.5 * K)（ハイブリッド制御・提案手法）
+  右サブプロット  : m = K（純粋ランダム）
 
-提案手法では等高線が上に押し上げられ、同一容量 K でより高い λ1 に耐えられること
-（トレードオフ完全突破）を視覚的に証明する。
+ハイブリッド手法は両極端のデメリットを克服し、
+より広い λ1 範囲で安定動作することを示す。
 
 出力: experiment_4_contour.png
 """
@@ -50,8 +52,12 @@ STRATEGIES = [
         "m_func" : lambda K: 0,
     },
     {
-        "label"  : r"$m = \lfloor 0.6K \rfloor$",
-        "m_func" : lambda K: int(0.6 * K),
+        "label"  : r"$m = \lfloor 0.5K \rfloor$",
+        "m_func" : lambda K: int(0.5 * K),
+    },
+    {
+        "label"  : r"$m = K$",
+        "m_func" : lambda K: K,
     },
 ]
 
@@ -207,7 +213,7 @@ def draw_subplot(ax, K_values, lambda1_max_arr, P_block_common, lam1_common, tit
             linewidths=1.8,
             zorder=3,
         )
-        fmt = {lv: f"{int(round(lv * 100))}%" for lv in CONTOUR_LEVELS}
+        fmt = {lv: f"{lv * 100:.2f}%" for lv in CONTOUR_LEVELS}
         ax.clabel(cs, fmt=fmt, fontsize=9, inline=True, inline_spacing=5)
     except Exception as e:
         print(f"  [WARN] contour failed for '{title}': {e}")
@@ -258,12 +264,13 @@ def main():
         for lam1_max, lam1_grid, P_block_grid in results
     ]
 
-    # ---- Figure 作成（1行2列, sharey=True）----
-    fig, axes = plt.subplots(1, 2, figsize=(16, 7), sharey=True)
+    # ---- Figure 作成（1行3列, sharey=True）----
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5.5), sharey=True)
 
     titles = [
         r"$m = 0$   ",
-        r"$m = \lfloor 0.6K \rfloor$",
+        r"$m = \lfloor 0.5K \rfloor$",
+        r"$m = K$   ",
     ]
 
     for ax, (lam1_max, _, _), P_common, title in zip(
@@ -271,11 +278,12 @@ def main():
     ):
         draw_subplot(ax, K_VALUES, lam1_max, P_common, lam1_common, title)
 
-    # sharey=True のため右サブプロットの Y ラベルは不要
+    # sharey=True のため中央・右サブプロットの Y ラベルは不要
     axes[1].set_ylabel("")
+    axes[2].set_ylabel("")
 
     # Y 軸範囲を共通設定
-    axes[0].set_ylim(lam1_global_min, lam1_global_max)
+    axes[0].set_ylim(lam1_global_min, lam1_global_max+5)
 
     # ---- 全体タイトル ----
     param_str = (
@@ -287,10 +295,11 @@ def main():
     )
     fig.suptitle(
         "Experiment 4: Proof of Trade-off Breakthrough\n"
+        "Hybrid Control Overcomes Extremes of Both Pure Zipper & Pure Random Strategies\n"
         r"Contours of $P_\mathrm{block}$ and Stability Boundary in ($K$, $\lambda_1$) Space"
         f"\n({param_str})",
         fontsize=12,
-        y=1.02,
+        y=1.00,
     )
 
     plt.tight_layout()
