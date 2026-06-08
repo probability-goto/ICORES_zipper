@@ -53,19 +53,41 @@ COL_LABELS = [
 # λ_{1,max} の計算
 # ---------------------------------------------------------------------------
 
-def _compute_lam1_max(m: int) -> float:
+def _compute_lam1_max(m: int, p: float) -> float:
+    """各 (m, p) ペアに対する λ1_max(m, p) を返す。
+
+    Q_{-1} と Q0 のモードAブロックに p が含まれるため、
+    λ1_max は (m, p) の両方の関数である。
+    """
     model = DynamicThresholdQBD(
         lam1=LAM1_DUMMY, lam2=LAM2,
         mu1_rand=MU1_RAND, mu2_rand=MU2_RAND,
         mu1_zip=MU1_ZIP,  mu2_zip=MU2_ZIP,
-        K=K, m=m, p=0.5,
+        K=K, m=m, p=p,
     )
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         val = compute_exact_lambda1_max(model, tol=1e-8)
     for w in caught:
-        tqdm.write(f"  [WARN] λ1_max m={m}: {w.message}")
+        tqdm.write(f"  [WARN] λ1_max m={m}, p={p:.2f}: {w.message}")
     return float(val)
+
+
+def _get_lam1(mi: int, pi_idx: int, load_level: str, lam1_max_table: np.ndarray) -> float:
+    """指定の (m_idx, p_idx, 負荷水準) に対する λ1 を返す。
+
+    load_level: 'low' | 'medium' | 'high'
+    """
+    if load_level == "low":
+        return LAM1_LOW
+    lm = lam1_max_table[mi, pi_idx]
+    if np.isnan(lm) or lm <= 0:
+        return np.nan
+    if load_level == "medium":
+        return lm * 0.5
+    if load_level == "high":
+        return lm * 0.95
+    raise ValueError(f"Unknown load level: {load_level}")
 
 
 # ---------------------------------------------------------------------------
@@ -91,62 +113,61 @@ def _compute_metrics(m: int, p: float, lam1: float):
 # ---------------------------------------------------------------------------
 
 def main():
-    # ---- Step 1: λ_{1,max} を各 m について計算 ----
-    print("Step 1: Computing λ_{1,max} for each m ...")
-    lam1_max_dict: dict = {}
-    for m in M_VALUES:
-        try:
-            val = _compute_lam1_max(m)
-            lam1_max_dict[m] = val
-            print(f"  m={m:2d}:  λ1_max = {val:.4f}")
-        except Exception as e:
-            tqdm.write(f"  [ERROR] λ1_max m={m}: {e}")
-            lam1_max_dict[m] = None
-
-    # ---- Step 2: λ1 水準を各 m について確定 ----
-    # lam1_table[m] = [lam1_low, lam1_med, lam1_high]  （None はスキップ）
-    lam1_table: dict = {}
-    for m in M_VALUES:
-        lam1_max = lam1_max_dict[m]
-        if lam1_max is None:
-            lam1_table[m] = [None, None, None]
-        else:
-            lam1_table[m] = [
-                LAM1_LOW,
-                lam1_max * 0.5,
-                lam1_max * 0.95,
-            ]
-
-    # ---- Step 3: 全 (m, 負荷水準, p) の指標を計算 ----
-    # results[m_idx, load_idx, p_idx, metric_idx]  metric: 0=main, 1=merge, 2=total
+    # ---- Step 1: 全 (m, p) について λ_{1,max} を計算 ----
+    print("Step 1: Building λ_{1,max}(m, p) table ...")
     n_m = len(M_VALUES)
     n_p = len(P_VALUES)
+    lam1_max_table = np.full((n_m, n_p), np.nan)
+
+    total_lam1 = n_m * n_p
+    with tqdm(total=total_lam1, desc="λ1_max", unit="pt") as pbar:
+        for mi, m in enumerate(M_VALUES):
+            for pi_idx, p in enumerate(P_VALUES):
+                try:
+                    lam1_max_table[mi, pi_idx] = _compute_lam1_max(m, p)
+                except Exception as e:
+                    tqdm.write(f"  [ERROR] m={m}, p={p:.2f}: {e}")
+                pbar.update(1)
+
+    # ---- Step 2: 全 (m, 負荷水準, p) の指標を計算 ----
+    # results[m_idx, load_idx, p_idx, metric_idx]  metric: 0=main, 1=merge, 2=total
     results = np.full((n_m, 3, n_p, 3), np.nan)
 
-    total = n_m * 3 * n_p   # = 165
-    print(f"\nStep 2: Computing metrics ({total} total points) ...")
+    total_metrics = n_m * 3 * n_p   # = 165
+    print(f"\nStep 2: Computing metrics ({total_metrics} total points) ...")
 
-    with tqdm(total=total, desc="Computing", unit="pt") as pbar:
+    with tqdm(total=total_metrics, desc="E[L]", unit="pt") as pbar:
         for mi, m in enumerate(M_VALUES):
-            for li, load_name in enumerate(LOAD_NAMES):
-                lam1 = lam1_table[m][li]
-                if lam1 is None:
-                    tqdm.write(
-                        f"  [SKIP] m={m}, load={load_name}: λ1_max unavailable"
-                    )
-                    pbar.update(n_p)
-                    continue
-                for pi_idx, p in enumerate(P_VALUES):
+            for pi_idx, p in enumerate(P_VALUES):
+                for li, load_level in enumerate(LOAD_NAMES):
+                    lam1 = _get_lam1(mi, pi_idx, load_level, lam1_max_table)
+                    if np.isnan(lam1) or lam1 <= 0:
+                        tqdm.write(
+                            f"  [SKIP] m={m}, p={p:.2f}, {load_level}: invalid λ1"
+                        )
+                        pbar.update(1)
+                        continue
+
+                    # 安全性チェック：λ1 が λ1_max を超えないか確認
+                    lam1_max = lam1_max_table[mi, pi_idx]
+                    if not np.isnan(lam1_max) and lam1 >= lam1_max * 0.999:
+                        tqdm.write(
+                            f"  [SKIP] m={m}, p={p:.2f}, {load_level}: "
+                            f"λ1={lam1:.4f} >= 0.999×λ1_max={lam1_max:.4f} (unstable)"
+                        )
+                        pbar.update(1)
+                        continue
+
                     try:
                         metrics = _compute_metrics(m, p, lam1)
                         results[mi, li, pi_idx, :] = metrics
                     except Exception as e:
                         tqdm.write(
-                            f"  [WARN] m={m}, {load_name}, p={p:.2f}: {e}"
+                            f"  [WARN] m={m}, p={p:.2f}, {load_level}: {e}"
                         )
                     pbar.update(1)
 
-    # ---- Step 4: グラフ描画 ----
+    # ---- Step 3: グラフ描画 ----
     colors = [plt.cm.tab10(i) for i in range(n_m)]
     m_labels = [f"m={m}" for m in M_VALUES]
 
@@ -210,9 +231,10 @@ def main():
 
     fig.suptitle(
         "Experiment 5: Sensitivity Analysis of Probability p\n"
+        "Low: λ1=5  |  Medium: 0.5×λ1_max(m,p)  |  High: 0.95×λ1_max(m,p)\n"
         f"(K={K}, λ2={LAM2}, μ1_rand={MU1_RAND}, μ2_rand={MU2_RAND}, "
         f"μ1_zip={MU1_ZIP}, μ2_zip={MU2_ZIP})",
-        fontsize=12, y=1.00,
+        fontsize=11, y=1.00,
     )
 
     plt.tight_layout()
@@ -220,45 +242,121 @@ def main():
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
     print(f"\nSaved → {output_path}")
 
+    # ---- Step 4: λ1_max(m, p) ヒートマップを出力 ----
+    print("\nStep 3: Generating λ1_max(m, p) heatmap...")
+    _plot_lam1_max_heatmap(lam1_max_table, M_VALUES, P_VALUES)
+
     # ---- Step 5: 出力サマリ ----
-    print()
-    print("=" * 65)
+    print("\n" + "=" * 70)
     print(
-        f"{'m':<4} {'λ1_level':<10} {'λ1':>8} {'best_p':>8} {'min_E_L_total':>14}"
+        f"{'m':<4} {'λ1_level':<10} {'p':>6} {'λ1':>8} "
+        f"{'best_p':>8} {'min_E_L_total':>14}"
     )
-    print("-" * 65)
+    print("-" * 70)
 
     for mi, m in enumerate(M_VALUES):
-        for li, load_name in enumerate(LOAD_NAMES):
-            lam1 = lam1_table[m][li]
-            lam1_str = f"{lam1:.2f}" if lam1 is not None else "N/A"
+        for pi_idx, p in enumerate(P_VALUES):
+            for li, load_name in enumerate(LOAD_NAMES):
+                lam1 = _get_lam1(mi, pi_idx, load_name, lam1_max_table)
+                lam1_str = f"{lam1:.2f}" if not np.isnan(lam1) else "N/A"
 
-            y_total = results[mi, li, :, 2]
+                y_total = results[mi, li, pi_idx, 2]
 
-            if np.all(np.isnan(y_total)):
+                if np.isnan(y_total):
+                    print(
+                        f"{m:<4} {load_name:<10} {p:>6.2f} {lam1_str:>8} "
+                        f"{'----':>8} {'N/A':>14}"
+                    )
+                    continue
+
+                # 内点最小値を別途探索
+                y_series = results[mi, li, :, 2]
+                if np.all(np.isnan(y_series)):
+                    print(
+                        f"{m:<4} {load_name:<10} {p:>6.2f} {lam1_str:>8} "
+                        f"{'----':>8} {'N/A':>14}"
+                    )
+                    continue
+
+                min_idx = int(np.nanargmin(y_series))
+                min_val = float(y_series[min_idx])
+                best_p  = P_VALUES[min_idx]
+
+                # m=0 は p に依存しないため "----" 表示
+                if m == 0:
+                    best_p_str = "----"
+                elif min_idx == 0 or min_idx == n_p - 1:
+                    best_p_str = f"{best_p:.2f}*"   # 端点最小は * で注記
+                else:
+                    best_p_str = f"{best_p:.2f}"
+
                 print(
-                    f"{m:<4} {load_name:<10} {lam1_str:>8} {'----':>8} {'N/A':>14}"
+                    f"{m:<4} {load_name:<10} {p:>6.2f} {lam1_str:>8} "
+                    f"{best_p_str:>8} {min_val:>14.4f}"
                 )
-                continue
 
-            min_idx = int(np.nanargmin(y_total))
-            min_val = float(y_total[min_idx])
-            best_p  = P_VALUES[min_idx]
-
-            # m=0 は p に依存しないため "----" 表示
-            if m == 0:
-                best_p_str = "----"
-            elif min_idx == 0 or min_idx == n_p - 1:
-                best_p_str = f"{best_p:.2f}*"   # 端点最小は * で注記
-            else:
-                best_p_str = f"{best_p:.2f}"
-
-            print(
-                f"{m:<4} {load_name:<10} {lam1_str:>8} {best_p_str:>8} {min_val:>14.4f}"
-            )
-
-    print("=" * 65)
+    print("=" * 70)
     print("(* = boundary optimum, not interior)")
+
+
+# ---------------------------------------------------------------------------
+# λ1_max(m, p) ヒートマップの出力
+# ---------------------------------------------------------------------------
+
+def _plot_lam1_max_heatmap(
+    lam1_max_table: np.ndarray,
+    M_VALUES: list,
+    P_VALUES: np.ndarray,
+    output_path: str = "experiment_5_lam1_max_heatmap.png",
+):
+    """λ1_max(m, p) の2次元ヒートマップを出力する。"""
+    fig, ax = plt.subplots(figsize=(11, 6))
+
+    # masked_invalid で NaN を除外
+    data_masked = np.ma.masked_invalid(lam1_max_table)
+
+    im = ax.imshow(
+        data_masked,
+        aspect="auto",
+        origin="lower",
+        cmap="viridis",
+        extent=[P_VALUES[0] - 0.05, P_VALUES[-1] + 0.05, -0.5, len(M_VALUES) - 0.5],
+    )
+
+    ax.set_yticks(range(len(M_VALUES)))
+    ax.set_yticklabels([f"m={m}" for m in M_VALUES])
+    ax.set_xticks(P_VALUES)
+    ax.set_xlabel("Probability $p$", fontsize=12)
+    ax.set_ylabel("Threshold $m$", fontsize=12)
+    ax.set_title(
+        f"λ₁_max(m, p)  —  Stability Limit as Function of (m, p)\n"
+        f"(K={K}, λ2={LAM2})",
+        fontsize=13,
+    )
+
+    cbar = plt.colorbar(im, ax=ax, label=r"$\lambda_{1,\mathrm{max}}$")
+
+    # セルに数値を表示
+    for mi in range(len(M_VALUES)):
+        for pi_idx, p in enumerate(P_VALUES):
+            val = lam1_max_table[mi, pi_idx]
+            if not np.isnan(val):
+                # テキストの色を背景に応じて調整
+                mean_val = np.nanmean(lam1_max_table)
+                text_color = "white" if val < mean_val else "black"
+                ax.text(
+                    p, mi,
+                    f"{val:.1f}",
+                    ha="center",
+                    va="center",
+                    fontsize=8,
+                    color=text_color,
+                    weight="normal",
+                )
+
+    plt.tight_layout()
+    fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    print(f"Saved → {output_path}")
 
 
 if __name__ == "__main__":
