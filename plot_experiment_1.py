@@ -32,11 +32,11 @@ M_VALUES = [0, 2, 5, 7, 10]
 NUM_POINTS = 35  # lambda1 の分割点数
 
 M_LABELS = {
-    0:  r"$m=0$  (Pure Zipper)",
-    2:  r"$m=2$  (Hybrid)",
-    5:  r"$m=5$  (Hybrid)",
-    7:  r"$m=7$  (Hybrid)",
-    10: r"$m=10$ (Pure Random)",
+    0:  r"$m=0$  (Zipper)",
+    2:  r"$m=2$",
+    5:  r"$m=5$",
+    7:  r"$m=7$",
+    10: r"$m=10$ (Random)",
 }
 
 
@@ -179,7 +179,6 @@ def main():
 
     fig.suptitle(
         (
-            "Experiment 1: Hybrid Control vs. Pure Strategies\n"
             rf"($K={K}$, $\lambda_2={LAM2}$, $p={P}$, "
             rf"$\mu_1^{{\mathrm{{rand}}}}={MU1_RAND}$, $\mu_2^{{\mathrm{{rand}}}}={MU2_RAND}$, "
             rf"$\mu_1^{{\mathrm{{zip}}}}={MU1_ZIP}$, $\mu_2^{{\mathrm{{zip}}}}={MU2_ZIP}$)"
