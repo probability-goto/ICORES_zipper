@@ -142,7 +142,6 @@ def plot(K_mesh, ratio_mesh, Z, output_path="experiment_3_heatmap.png"):
 
     # --- タイトル ---
     ax.set_title(
-        "Experiment 3: 2-D Analysis of $K$–$m$ Interaction\n"
         rf"($\lambda_2={LAM2}$, $p={P}$, "
         rf"$\mu_1^{{\mathrm{{rand}}}}={MU1_RAND}$, "
         rf"$\mu_2^{{\mathrm{{rand}}}}={MU2_RAND}$, "
