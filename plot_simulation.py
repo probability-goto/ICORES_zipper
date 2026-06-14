@@ -1,7 +1,8 @@
 """
 Produce the same 6 theory plots (3 for lambda1 sweeps, 3 for lambda2 sweeps)
-and overlay simulation points (default ~50k events each) on the theoretical
-curves. The layout is 3 rows x 2 columns: left column = lambda1 sweeps
+and overlay simulation points (default 1.1M events, first 100k discarded as
+warm-up, 1M used) on the theoretical curves.
+The layout is 3 rows x 2 columns: left column = lambda1 sweeps
 (E[L_main], E[L_merge]), right column = lambda2 sweeps.
 """
 from __future__ import annotations
@@ -53,8 +54,8 @@ def plot_6_theory_vs_sim(
     Ks=(5, 10, 15),
     lambda2_fixed_for_1_3: float = 10.0,
     lambda1_fixed_for_4_6: float = 10.0,
-    sim_max_events: int = 50_000,
-    sim_warmup: int = 5_000,
+    sim_max_events: int = 1_100_000,
+    sim_warmup: int = 100_000,
     seed_base: int = 123,
     num_sim_points: int = 20,
 ):
@@ -109,8 +110,8 @@ def plot_6_theory_vs_sim(
         # overlay simulation markers
         for j, lam1 in enumerate(sim_points):
             E_main_s, E_merge_s, _ = sim_res[lam1]
-            ax.scatter([lam1], [E_main_s], marker='o', color='C0', edgecolor='k', zorder=5, label='Sim: E[L_main]' if j == 0 and row == 0 else "")
-            ax.scatter([lam1], [E_merge_s], marker='s', color='C1', edgecolor='k', zorder=5, label='Sim: E[L_merge]' if j == 0 and row == 0 else "")
+            ax.scatter([lam1], [E_main_s], marker='o', color='C0', edgecolor='k', zorder=5, label='Sim: E[L_{main}]' if j == 0 and row == 0 else "")
+            ax.scatter([lam1], [E_merge_s], marker='s', color='C1', edgecolor='k', zorder=5, label='Sim: E[L_{merge}]' if j == 0 and row == 0 else "")
         if row == 0:
             ax.legend()
 
@@ -154,8 +155,8 @@ def plot_6_theory_vs_sim(
 
         for j, lam2 in enumerate(sim_points):
             E_main_s, E_merge_s, _ = sim_res[lam2]
-            ax.scatter([lam2], [E_main_s], marker='o', color='C0', edgecolor='k', zorder=5, label='Sim: E[L_main]' if j == 0 and row == 0 else "")
-            ax.scatter([lam2], [E_merge_s], marker='s', color='C1', edgecolor='k', zorder=5, label='Sim: E[L_merge]' if j == 0 and row == 0 else "")
+            ax.scatter([lam2], [E_main_s], marker='o', color='C0', edgecolor='k', zorder=5, label='Sim: E[L_{main}]' if j == 0 and row == 0 else "")
+            ax.scatter([lam2], [E_merge_s], marker='s', color='C1', edgecolor='k', zorder=5, label='Sim: E[L_{merge}]' if j == 0 and row == 0 else "")
         if row == 0:
             ax.legend()
 
