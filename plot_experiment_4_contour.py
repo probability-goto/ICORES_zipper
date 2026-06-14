@@ -294,9 +294,6 @@ def main():
         rf"$\mu_2^\mathrm{{zip}}={MU2_ZIP}$"
     )
     fig.suptitle(
-        "Experiment 4: Proof of Trade-off Breakthrough\n"
-        "Hybrid Control Overcomes Extremes of Both Pure Zipper & Pure Random Strategies\n"
-        r"Contours of $P_\mathrm{block}$ and Stability Boundary in ($K$, $\lambda_1$) Space"
         f"\n({param_str})",
         fontsize=12,
         y=1.00,
