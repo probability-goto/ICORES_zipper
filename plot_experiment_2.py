@@ -146,7 +146,6 @@ def plot(data, K_values, lam2_values, m_specs, output_path="experiment_2_results
 
     fig.suptitle(
         (
-            "Experiment 2: Trade-off Mitigation between $K$ and $\\lambda_{1,\\mathrm{max}}$\n"
             rf"($p={P}$, "
             rf"$\mu_1^{{\mathrm{{rand}}}}={MU1_RAND}$, "
             rf"$\mu_2^{{\mathrm{{rand}}}}={MU2_RAND}$, "
