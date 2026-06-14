@@ -30,10 +30,10 @@ LAM2_VALUES = [5, 10, 20]
 
 # (m の値または 'K', 凡例ラベル, マーカースタイル, 色)
 M_SPECS = [
-    (0,   r"$m=0$  (Pure Zipper)",  "o-", "tab:blue"),
-    (2,   r"$m=2$  (Hybrid)",       "s-", "tab:orange"),
-    (5,   r"$m=5$  (Hybrid)",       "^-", "tab:green"),
-    ("K", r"$m=K$  (Pure Random)",  "D-", "tab:red"),
+    (0,   r"$m=0$  (Zipper)",  "o-", "tab:blue"),
+    (2,   r"$m=2$",       "s-", "tab:orange"),
+    (5,   r"$m=5$",       "^-", "tab:green"),
+    ("K", r"$m=K$  (Random)",  "D-", "tab:red"),
 ]
 
 # ---------------------------------------------------------------------------
