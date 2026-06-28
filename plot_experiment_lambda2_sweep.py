@@ -100,13 +100,14 @@ def compute_sweep():
 # ---------------------------------------------------------------------------
 
 def plot(results):
-    fig, axes = plt.subplots(1, 4, figsize=(20, 5))
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     panel_labels = ["(A)", "(B)", "(C)", "(D)"]
     metrics      = ["E_L_main", "E_L_merge", "P_block", "throughput"]
     ylabels      = [r"$E[L_{\mathrm{main}}]$", r"$E[L_{\mathrm{merge}}]$",
                     r"$P_{\mathrm{block}}$", "Total Throughput"]
 
-    for col, (ax, metric, ylabel, panel) in enumerate(zip(axes, metrics, ylabels, panel_labels)):
+    for idx, (metric, ylabel, panel) in enumerate(zip(metrics, ylabels, panel_labels)):
+        ax = axes[idx // 2][idx % 2]
         for m in M_VALUES:
             lam2_arr = np.array(results[m]["lam2"])
             y_arr    = np.array(results[m][metric])
@@ -123,7 +124,7 @@ def plot(results):
         if metric == "P_block":
             ax.set_yscale("log")
 
-        if col == 0:
+        if idx == 0:
             ax.legend(fontsize=11, loc="upper left")
 
     fig.suptitle(
