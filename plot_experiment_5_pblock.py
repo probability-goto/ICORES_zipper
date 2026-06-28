@@ -167,7 +167,7 @@ def main():
                     pbar.update(1)
 
     # ---- Step 3: グラフ描画 ----
-    fig, axes = plt.subplots(3, 1, figsize=(8, 12))
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
     m_labels = [f"m={m}" for m in M_VALUES]
 
@@ -200,7 +200,7 @@ def main():
         ax.set_xlim(-0.02, 1.02)
         ax.grid(True, linestyle="--", alpha=0.3)
 
-    # 凡例は最上部パネル (低負荷) のみ
+    # 凡例は左端パネル (低負荷) のみ
     handles, labs = axes[0].get_legend_handles_labels()
     axes[0].legend(
         handles, labs,
