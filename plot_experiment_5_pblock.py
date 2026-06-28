@@ -211,7 +211,6 @@ def main():
     )
 
     fig.suptitle(
-        "Experiment 5 Extended: $P_{\\mathrm{block}}$ Sensitivity to $p$\n"
         f"(K={K}, $\\lambda_2$={LAM2}, $\\mu_{{1,\\mathrm{{rand}}}}$={MU1_RAND}, "
         f"$\\mu_{{2,\\mathrm{{rand}}}}$={MU2_RAND}, "
         f"$\\mu_{{1,\\mathrm{{zip}}}}$={MU1_ZIP}, $\\mu_{{2,\\mathrm{{zip}}}}$={MU2_ZIP})",
