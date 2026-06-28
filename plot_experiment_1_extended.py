@@ -10,12 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-try:
-    from scipy.linalg import null_space
-except ImportError:
-    null_space = None
-
 from qbd_model import DynamicThresholdQBD
+from stability_analysis import compute_exact_lambda1_max
 from stationary_analysis import compute_stationary, calculate_performance_measures
 
 # --- パラメータ設定 ---
@@ -44,73 +40,6 @@ M_LABELS = {
 
 
 # ---------------------------------------------------------------------------
-# 安定限界の計算 (plot_experiment_1.py と同一ロジック)
-# ---------------------------------------------------------------------------
-
-def _left_stationary(A):
-    """行列 A の左定常分布 η を求める（η A = 0, η e = 1）。"""
-    ns = None
-    if null_space is not None:
-        ns = null_space(A.T)
-
-    if ns is None or ns.size == 0:
-        _, _, Vt = np.linalg.svd(A.T, full_matrices=False)
-        ns = Vt.T[:, -1:]
-
-    if ns.size == 0:
-        raise RuntimeError("A^T の零空間が得られませんでした。")
-
-    eta = np.real_if_close(ns[:, 0].astype(float), tol=1000)
-    if np.sum(eta) < 0:
-        eta = -eta
-    s = np.sum(eta)
-    if s == 0:
-        raise RuntimeError("定常分布の正規化に失敗しました。")
-    return eta / s
-
-
-def compute_lambda1_max(m, lam2=LAM2, K=K, p=P, tol=1e-6):
-    """フェーズ遷移行列 A = Q_0 + Q_{+1} + Q_{-1} の左定常分布から
-    安定限界 λ_{1,max} を二分探索で求める。"""
-
-    def _throughput(lam1):
-        model = DynamicThresholdQBD(
-            lam1=lam1, lam2=lam2,
-            mu1_rand=MU1_RAND, mu2_rand=MU2_RAND,
-            mu1_zip=MU1_ZIP,  mu2_zip=MU2_ZIP,
-            K=K, m=m, p=p,
-        )
-        A = model.Q0 + model.Q_plus1 + model.Q_minus1
-        try:
-            eta = _left_stationary(A)
-        except Exception:
-            return 0.0
-        return float(eta @ (model.Q_minus1 @ np.ones(A.shape[0])))
-
-    low, high = 0.0, max(1.0, MU1_RAND * 2)
-
-    for _ in range(20):
-        if _throughput(high) - high < 0:
-            break
-        high *= 2.0
-
-    if _throughput(high) - high >= 0:
-        return high
-
-    for _ in range(60):
-        mid = 0.5 * (low + high)
-        g_mid = _throughput(mid) - mid
-        if abs(g_mid) < tol:
-            return mid
-        if g_mid > 0:
-            low = mid
-        else:
-            high = mid
-
-    return 0.5 * (low + high)
-
-
-# ---------------------------------------------------------------------------
 # メイン計算とプロット
 # ---------------------------------------------------------------------------
 
@@ -125,7 +54,13 @@ def main():
         color = COLORS[idx % len(COLORS)]
         label = M_LABELS.get(m, f"m={m}")
 
-        lam1_max = compute_lambda1_max(m)
+        probe = DynamicThresholdQBD(
+            lam1=1.0, lam2=LAM2,
+            mu1_rand=MU1_RAND, mu2_rand=MU2_RAND,
+            mu1_zip=MU1_ZIP,  mu2_zip=MU2_ZIP,
+            K=K, m=m, p=P,
+        )
+        lam1_max = compute_exact_lambda1_max(probe)
         lam1_vals = np.linspace(0.1, lam1_max * 0.98, NUM_POINTS)
 
         E_main_vals  = []

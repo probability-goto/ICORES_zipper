@@ -12,6 +12,22 @@ def _residual(eta: np.ndarray, A: np.ndarray) -> float:
     return float(np.max(np.abs(eta @ A)))
 
 
+def _validate_eta(eta: np.ndarray, A: np.ndarray, tol: float = 1e-6) -> None:
+    """η A = 0 かつ η e = 1 を検証し、逸脱時に警告を発する。"""
+    res = _residual(eta, A)
+    if res > tol:
+        warnings.warn(
+            f"validate_eta: η A ≠ 0  (|ηA|_inf = {res:.3e} > tol={tol:.3e})",
+            stacklevel=3,
+        )
+    norm_err = abs(float(np.sum(eta)) - 1.0)
+    if norm_err > tol:
+        warnings.warn(
+            f"validate_eta: η e ≠ 1  (|Ση - 1| = {norm_err:.3e} > tol={tol:.3e})",
+            stacklevel=3,
+        )
+
+
 def _normalize(v: np.ndarray) -> np.ndarray:
     """正規化: 符号を正方向に揃え sum(eta)=1 にする。"""
     if np.sum(v) < 0:
@@ -106,7 +122,10 @@ def compute_exact_lambda1_max(model: DynamicThresholdQBD, tol: float = 1e-8) -> 
                 stacklevel=2,
             )
 
-    # 5. lambda_{1,max} = eta @ Q_{-1} @ e
+    # 5. η A = 0, η e = 1 の最終検証
+    _validate_eta(eta, A, tol=max(tol, 1e-6))
+
+    # 6. lambda_{1,max} = eta @ Q_{-1} @ e
     ones = np.ones(n)
     return float(eta @ model.Q_minus1 @ ones)
 

@@ -12,12 +12,8 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from qbd_model import DynamicThresholdQBD
+from stability_analysis import compute_exact_lambda1_max
 from stationary_analysis import compute_stationary, calculate_performance_measures
-
-try:
-    from scipy.linalg import null_space
-except Exception:
-    null_space = None
 
 
 # ベースラインパラメータ
@@ -45,81 +41,9 @@ def make_model(lam1, lam2, K, m=None, p=P):
     )
 
 
-def _left_stationary_of_A(A):
-    """行列 A の左定常分布 eta を求める（eta A = 0）．"""
-    # null_space を使って A^T の零空間を取る
-    ns = None
-    if null_space is not None:
-        ns = null_space(A.T)
-
-    if ns is None or ns.size == 0:
-        # SVD によるフォールバック
-        U, s, Vt = np.linalg.svd(A.T, full_matrices=False)
-        ns = Vt.T[:, -1:]
-
-    if ns.size == 0:
-        raise RuntimeError("A^T の零空間が得られませんでした。")
-
-    eta = ns[:, 0].astype(float)
-    eta = np.real_if_close(eta, tol=1000)
-    # 正にする（必要なら符号反転）
-    if np.sum(eta) < 0:
-        eta = -eta
-    s = np.sum(eta)
-    if s == 0:
-        raise RuntimeError("定常分布の正規化に失敗しました。")
-    eta = eta / s
-    return eta
-
-
-def compute_lambda1_max_for_params(lambda2, K, m=None, p=P, tol=1e-6):
-    """与えられた lambda2, K 等のパラメータに対して lambda1_max を数値的に求める。
-
-    解法: 固定点方程式 lam1 = f(lam1) を満たす lam1 を求める（f(lam1) = eta(lam1) Q_-1 e）。
-    二分探索（bisection）で解を探します。
-    """
-
-    def f(lam1):
-        # lam1 に対する f を評価
-        model = make_model(lam1, lambda2, K, m=m, p=p)
-        A = model.Q_minus1 + model.Q0 + model.Q_plus1
-        try:
-            eta = _left_stationary_of_A(A)
-        except Exception:
-            # 零空間取得失敗時は 0 を返して探索を続行
-            return 0.0
-        ones = np.ones(A.shape[0])
-        return float(eta @ (model.Q_minus1 @ ones))
-
-    # f(0) >= 0 であるはず
-    low = 0.0
-    high = max(1.0, MU1_RAND * 2)
-    # 括弧を探す（g(x)=f(x)-x で符号変化を探す）
-    g_low = f(low) - low
-    g_high = f(high) - high
-    max_expand = 20
-    expand = 0
-    while g_high >= 0 and expand < max_expand:
-        high *= 2.0
-        g_high = f(high) - high
-        expand += 1
-
-    if g_high >= 0:
-        # 符号変化が見つからなかった。f が大きく lambda1 を上回る場合、上限を high として返す
-        return high
-
-    # 二分探索
-    for _ in range(50):
-        mid = 0.5 * (low + high)
-        g_mid = f(mid) - mid
-        if abs(g_mid) < tol:
-            return mid
-        if g_mid > 0:
-            low = mid
-        else:
-            high = mid
-
-    return 0.5 * (low + high)
+def _lambda1_max_for_params(lambda2, K, m=None, p=P):
+    """与えられたパラメータに対して lambda1_max を返す。"""
+    return compute_exact_lambda1_max(make_model(1.0, lambda2, K, m=m, p=p))
 
 
 def plot_results():
@@ -136,7 +60,7 @@ def plot_results():
         ax = axes[i]
         lam2 = lambda2_fixed_for_1_3
         print(f"Computing lambda1_max for K={K}, lambda2={lam2}...")
-        lambda1_max = compute_lambda1_max_for_params(lam2, K)
+        lambda1_max = _lambda1_max_for_params(lam2, K)
 
         if lambda1_max <= 0:
             lambda1_vals = np.linspace(0.1, 10, 20)
@@ -220,7 +144,7 @@ def plot_results():
 
     for K in tqdm(Ks_full, desc="compute for K range", leave=False):
         try:
-            lam1_max = compute_lambda1_max_for_params(10.0, K)
+            lam1_max = _lambda1_max_for_params(10.0, K)
         except Exception:
             lam1_max = np.nan
         lambda1_max_K.append(lam1_max)
