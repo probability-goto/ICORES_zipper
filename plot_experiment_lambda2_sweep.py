@@ -101,10 +101,10 @@ def compute_sweep():
 
 def plot(results):
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-    panel_labels = ["(A)", "(B)", "(C)", "(D)"]
+    panel_labels = ["(A) $E[L_{\mathrm{main}}]$", "(B) $E[L_{\mathrm{merge}}]$", "(C) $P_{\mathrm{block}}$", "(D) Total Throughput"]
     metrics      = ["E_L_main", "E_L_merge", "P_block", "throughput"]
     ylabels      = [r"$E[L_{\mathrm{main}}]$", r"$E[L_{\mathrm{merge}}]$",
-                    r"$P_{\mathrm{block}}$", "Total Throughput"]
+                    r"$P_{\mathrm{block}}$", "$\lambda_1 + \lambda_2(1 - P_{\mathrm{block}})$"]
 
     for idx, (metric, ylabel, panel) in enumerate(zip(metrics, ylabels, panel_labels)):
         ax = axes[idx // 2][idx % 2]
