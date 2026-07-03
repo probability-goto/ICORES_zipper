@@ -295,7 +295,7 @@ def main():
     )
     fig.suptitle(
         f"\n{param_str}",
-        fontsize=18,
+        fontsize=20,
         y=1.00,
     )
 
