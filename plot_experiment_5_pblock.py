@@ -194,9 +194,9 @@ def main():
             )
 
         ax.set_yscale("log")
-        ax.set_xlabel("$p$", fontsize=11)
-        ax.set_ylabel("$P_{\\mathrm{block}}$", fontsize=11)
-        ax.set_title(row_label, fontsize=12)
+        ax.set_xlabel("$p$", fontsize=16)
+        ax.set_ylabel("$P_{\\mathrm{block}}$", fontsize=16)
+        ax.set_title(row_label, fontsize=18)
         ax.set_xlim(-0.02, 1.02)
         ax.grid(True, linestyle="--", alpha=0.3)
 
@@ -205,16 +205,16 @@ def main():
     axes[0].legend(
         handles, labs,
         loc="upper right",
-        fontsize=9,
+        fontsize=12,
         title=r"Threshold $m$",
-        title_fontsize=9,
+        title_fontsize=12,
     )
 
     fig.suptitle(
-        f"(K={K}, $\\lambda_2$={LAM2}, $\\mu_{{1,\\mathrm{{rand}}}}$={MU1_RAND}, "
+        f"K={K}, $\\lambda_2$={LAM2}, $\\mu_{{1,\\mathrm{{rand}}}}$={MU1_RAND}, "
         f"$\\mu_{{2,\\mathrm{{rand}}}}$={MU2_RAND}, "
         f"$\\mu_{{1,\\mathrm{{zip}}}}$={MU1_ZIP}, $\\mu_{{2,\\mathrm{{zip}}}}$={MU2_ZIP})",
-        fontsize=11,
+        fontsize=20,
     )
 
     plt.tight_layout()
