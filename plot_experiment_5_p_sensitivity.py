@@ -225,15 +225,15 @@ def main():
     axes[0, 2].legend(
         handles, labs,
         loc="upper right",
-        fontsize=9,
+        fontsize=14,
         title=r"Threshold $m$",
-        title_fontsize=9,
+        title_fontsize=16,
     )
 
     fig.suptitle(
         f"(K={K}, λ2={LAM2}, μ1_rand={MU1_RAND}, μ2_rand={MU2_RAND}, "
         f"μ1_zip={MU1_ZIP}, μ2_zip={MU2_ZIP})",
-        fontsize=11, y=1.00,
+        fontsize=14, y=1.00,
     )
 
     plt.tight_layout()
@@ -328,11 +328,11 @@ def _plot_lam1_max_heatmap(
     ax.set_yticks(range(len(M_VALUES)))
     ax.set_yticklabels([f"m={m}" for m in M_VALUES])
     ax.set_xticks(P_VALUES_HEATMAP)
-    ax.set_xlabel("Probability $p$", fontsize=12)
-    ax.set_ylabel("Threshold $m$", fontsize=12)
+    ax.set_xlabel("Probability $p$", fontsize=16)
+    ax.set_ylabel("Threshold $m$", fontsize=16)
     ax.set_title(
         f"(K={K}, λ2={LAM2})",
-        fontsize=13,
+        fontsize=16,
     )
 
     cbar = plt.colorbar(im, ax=ax, label=r"$\lambda_{1,\mathrm{max}}$")
@@ -350,7 +350,7 @@ def _plot_lam1_max_heatmap(
                     f"{val:.1f}",
                     ha="center",
                     va="center",
-                    fontsize=8,
+                    fontsize=16,
                     color=text_color,
                     weight="normal",
                 )
