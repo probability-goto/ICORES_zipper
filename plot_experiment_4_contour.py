@@ -214,7 +214,7 @@ def draw_subplot(ax, K_values, lambda1_max_arr, P_block_common, lam1_common, tit
             zorder=3,
         )
         fmt = {lv: f"{lv * 100:.2f}%" for lv in CONTOUR_LEVELS}
-        ax.clabel(cs, fmt=fmt, fontsize=9, inline=True, inline_spacing=5)
+        ax.clabel(cs, fmt=fmt, fontsize=12, inline=True, inline_spacing=5)
     except Exception as e:
         print(f"  [WARN] contour failed for '{title}': {e}")
 
@@ -230,13 +230,13 @@ def draw_subplot(ax, K_values, lambda1_max_arr, P_block_common, lam1_common, tit
     ax.set_xlim(K_arr[0] - 0.5, K_arr[-1] + 0.5)
     ax.xaxis.set_major_locator(MultipleLocator(5))
     ax.xaxis.set_minor_locator(MultipleLocator(1))
-    ax.tick_params(axis="both", which="major", labelsize=11)
-    ax.set_xlabel("Capacity $K$", fontsize=13)
-    ax.set_ylabel(r"Arrival Rate $\lambda_1$", fontsize=13)
-    ax.set_title(title, fontsize=13, pad=10)
+    ax.tick_params(axis="both", which="major", labelsize=16)
+    ax.set_xlabel("$K$", fontsize=16)
+    ax.set_ylabel(r"Arrival Rate $\lambda_1$", fontsize=16)
+    ax.set_title(title, fontsize=18, pad=10)
     ax.grid(True, which="major", alpha=0.35, linestyle="--")
     ax.grid(True, which="minor", alpha=0.12, linestyle=":")
-    ax.legend(loc="upper left", fontsize=10)
+    ax.legend(loc="upper left", fontsize=12)
 
 
 # ---------------------------------------------------------------------------
@@ -294,8 +294,8 @@ def main():
         rf"$\mu_2^\mathrm{{zip}}={MU2_ZIP}$"
     )
     fig.suptitle(
-        f"\n({param_str})",
-        fontsize=12,
+        f"\n{param_str}",
+        fontsize=18,
         y=1.00,
     )
 
