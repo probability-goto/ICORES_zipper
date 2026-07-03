@@ -328,7 +328,7 @@ def _plot_lam1_max_heatmap(
     ax.set_yticks(range(len(M_VALUES)))
     ax.set_yticklabels([f"m={m}" for m in M_VALUES])
     ax.set_xticks(P_VALUES_HEATMAP)
-    ax.set_xlabel("Probability $p$", fontsize=16)
+    ax.set_xlabel("$p$", fontsize=16)
     ax.set_ylabel("Threshold $m$", fontsize=16)
     ax.set_title(
         f"(K={K}, λ2={LAM2})",
