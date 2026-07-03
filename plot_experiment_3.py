@@ -125,8 +125,8 @@ def plot(K_mesh, ratio_mesh, Z, output_path="experiment_3_heatmap.png"):
     cbar.ax.tick_params(labelsize=10)
 
     # --- 軸設定 ---
-    ax.set_xlabel("Capacity $K$", fontsize=14)
-    ax.set_ylabel("Threshold Ratio $m/K$", fontsize=14)
+    ax.set_xlabel("$K$", fontsize=16)
+    ax.set_ylabel("Threshold Ratio $m/K$", fontsize=16)
     ax.set_xlim(K_VALUES[0] - 0.5, K_VALUES[-1] + 0.5)
     ax.set_ylim(-0.01, 1.01)
 
@@ -134,7 +134,7 @@ def plot(K_mesh, ratio_mesh, Z, output_path="experiment_3_heatmap.png"):
     ax.xaxis.set_minor_locator(MultipleLocator(1))
     ax.yaxis.set_major_locator(MultipleLocator(0.25))
     ax.yaxis.set_minor_locator(MultipleLocator(0.05))
-    ax.tick_params(axis="both", which="major", labelsize=11)
+    ax.tick_params(axis="both", which="major", labelsize=16)
 
     # --- 参照水平線（特定比率を強調） ---
     for ratio_ref, ls, alpha in [(0.25, "--", 0.55), (0.5, "-.", 0.55), (0.75, ":", 0.55)]:
@@ -142,12 +142,12 @@ def plot(K_mesh, ratio_mesh, Z, output_path="experiment_3_heatmap.png"):
 
     # --- タイトル ---
     ax.set_title(
-        rf"($\lambda_2={LAM2}$, $p={P}$, "
+        rf"$\lambda_2={LAM2}$, $p={P}$, "
         rf"$\mu_1^{{\mathrm{{rand}}}}={MU1_RAND}$, "
         rf"$\mu_2^{{\mathrm{{rand}}}}={MU2_RAND}$, "
         rf"$\mu_1^{{\mathrm{{zip}}}}={MU1_ZIP}$, "
-        rf"$\mu_2^{{\mathrm{{zip}}}}={MU2_ZIP}$)",
-        fontsize=12,
+        rf"$\mu_2^{{\mathrm{{zip}}}}={MU2_ZIP}$",
+        fontsize=18,
         pad=10,
     )
 
