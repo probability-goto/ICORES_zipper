@@ -133,7 +133,7 @@ def plot(results):
         rf"\ \mu_2^{{\rm rand}}={MU2_RAND},"
         rf"\ \mu_1^{{\rm zip}}={MU1_ZIP},"
         rf"\ \mu_2^{{\rm zip}}={MU2_ZIP}$",
-        fontsize=16,
+        fontsize=18,
         y=1.02,
     )
 
