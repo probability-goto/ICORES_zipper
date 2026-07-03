@@ -16,7 +16,7 @@ from stationary_analysis import compute_stationary, calculate_performance_measur
 
 # --- パラメータ設定 ---
 # 実験1と同一。他実験との統一が必要な場合は MU1_RAND = 40 に変更する。
-MU1_RAND = 45
+MU1_RAND = 40
 MU2_RAND = 30
 MU1_ZIP = 30
 MU2_ZIP = 20
@@ -104,30 +104,30 @@ def main():
     pbar.close()
 
     # --- パネル (A): E[L_main] ---
-    ax_main.set_xlabel(r"$\lambda_1$", fontsize=13)
-    ax_main.set_ylabel(r"$E[L_{\mathrm{main}}]$", fontsize=13)
-    ax_main.set_title(r"(A) $E[L_{\mathrm{main}}]$", fontsize=13)
+    ax_main.set_xlabel(r"$\lambda_1$", fontsize=16)
+    ax_main.set_ylabel(r"$E[L_{\mathrm{main}}]$", fontsize=16)
+    ax_main.set_title(r"(A) $E[L_{\mathrm{main}}]$", fontsize=16)
     ax_main.set_ylim(0, 70)
-    ax_main.legend(fontsize=10)
+    ax_main.legend(fontsize=12)
     ax_main.grid(True, linestyle="--", alpha=0.3)
 
     # --- パネル (B): E[L_merge] ---
-    ax_merge.set_xlabel(r"$\lambda_1$", fontsize=13)
-    ax_merge.set_ylabel(r"$E[L_{\mathrm{merge}}]$", fontsize=13)
-    ax_merge.set_title(r"(B) $E[L_{\mathrm{merge}}]$", fontsize=13)
+    ax_merge.set_xlabel(r"$\lambda_1$", fontsize=16)
+    ax_merge.set_ylabel(r"$E[L_{\mathrm{merge}}]$", fontsize=16)
+    ax_merge.set_title(r"(B) $E[L_{\mathrm{merge}}]$", fontsize=16)
     ax_merge.grid(True, linestyle="--", alpha=0.3)
 
     # --- パネル (C): P_block (対数スケール) ---
-    ax_pblock.set_xlabel(r"$\lambda_1$", fontsize=13)
-    ax_pblock.set_ylabel(r"$P_{\mathrm{block}}$", fontsize=13)
-    ax_pblock.set_title(r"(C) Blocking Probability $P_{\mathrm{block}}$", fontsize=13)
+    ax_pblock.set_xlabel(r"$\lambda_1$", fontsize=16)
+    ax_pblock.set_ylabel(r"$P_{\mathrm{block}}$", fontsize=16)
+    ax_pblock.set_title(r"(C) Blocking Probability $P_{\mathrm{block}}$", fontsize=16)
     ax_pblock.set_yscale("log")
     ax_pblock.grid(True, linestyle="--", alpha=0.3)
 
     # --- パネル (D): 合計スループット ---
-    ax_tput.set_xlabel(r"$\lambda_1$", fontsize=13)
-    ax_tput.set_ylabel(r"$\lambda_1 + \lambda_2(1 - P_{\mathrm{block}})$", fontsize=13)
-    ax_tput.set_title(r"(D) Total Throughput", fontsize=13)
+    ax_tput.set_xlabel(r"$\lambda_1$", fontsize=16)
+    ax_tput.set_ylabel(r"$\lambda_1 + \lambda_2(1 - P_{\mathrm{block}})$", fontsize=16)
+    ax_tput.set_title(r"(D) Total Throughput", fontsize=16)
     ax_tput.grid(True, linestyle="--", alpha=0.3)
 
     fig.suptitle(
@@ -136,7 +136,7 @@ def main():
             rf"$\mu_1^{{\mathrm{{rand}}}}={MU1_RAND}$, $\mu_2^{{\mathrm{{rand}}}}={MU2_RAND}$, "
             rf"$\mu_1^{{\mathrm{{zip}}}}={MU1_ZIP}$, $\mu_2^{{\mathrm{{zip}}}}={MU2_ZIP}$"
         ),
-        fontsize=12,
+        fontsize=18,
     )
 
     plt.tight_layout()
