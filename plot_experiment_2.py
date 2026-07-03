@@ -132,27 +132,27 @@ def plot(data, K_values, lam2_values, m_specs, output_path="experiment_2_results
                 markersize=6,
             )
 
-        ax.set_xlabel("Capacity $K$", fontsize=13)
+        ax.set_xlabel("$K$", fontsize=16)
         ax.set_title(
             rf"{subplot_labels[col]} $\lambda_2 = {lam2}$",
-            fontsize=13,
+            fontsize=16,
         )
         ax.set_xticks(K_values[::2])   # 偶数 K のみ目盛り表示（密集防止）
         ax.grid(True, linestyle="--", alpha=0.55)
-        ax.legend(fontsize=10, loc="best")
+        ax.legend(fontsize=12, loc="best")
 
     # Y 軸ラベルは左端のサブプロットのみ
-    axes[0].set_ylabel(r"Max Throughput $\lambda_{1,\mathrm{max}}$", fontsize=13)
+    axes[0].set_ylabel(r"Max Throughput $\lambda_{1,\mathrm{max}}$", fontsize=16)
 
     fig.suptitle(
         (
-            rf"($p={P}$, "
+            rf"$p={P}$, "
             rf"$\mu_1^{{\mathrm{{rand}}}}={MU1_RAND}$, "
             rf"$\mu_2^{{\mathrm{{rand}}}}={MU2_RAND}$, "
             rf"$\mu_1^{{\mathrm{{zip}}}}={MU1_ZIP}$, "
-            rf"$\mu_2^{{\mathrm{{zip}}}}={MU2_ZIP}$)"
+            rf"$\mu_2^{{\mathrm{{zip}}}}={MU2_ZIP}$"
         ),
-        fontsize=12,
+        fontsize=18,
         y=1.02,
     )
 
