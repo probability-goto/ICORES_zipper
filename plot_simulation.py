@@ -16,7 +16,7 @@ from stationary_analysis import compute_stationary, calculate_performance_measur
 from simulation import simulate
 
 # import helper from plot_results to compute lambda1_max exactly the same way
-from plot_results import compute_lambda1_max_for_params, make_model as plot_results_make_model
+from plot_results import _lambda1_max_for_params as compute_lambda1_max_for_params, make_model as plot_results_make_model
 
 
 # constants used in plot_results.py (keep same values for consistency)
@@ -59,6 +59,14 @@ def plot_6_theory_vs_sim(
     seed_base: int = 123,
     num_sim_points: int = 20,
 ):
+    plt.rcParams.update({
+        'font.size': 16,
+        'axes.titlesize': 18,
+        'axes.labelsize': 17,
+        'legend.fontsize': 15,
+        'xtick.labelsize': 15,
+        'ytick.labelsize': 15,
+    })
     fig, axes = plt.subplots(3, 2, figsize=(14, 14))
 
     # --- Left column: lambda1 sweeps for each K ---
