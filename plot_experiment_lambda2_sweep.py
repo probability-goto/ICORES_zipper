@@ -116,24 +116,24 @@ def plot(results):
                     linewidth=2,
                     label=f"$m={m}$")
 
-        ax.set_xlabel(r"$\lambda_2$", fontsize=12)
-        ax.set_ylabel(ylabel, fontsize=12)
-        ax.set_title(panel, fontsize=12)
+        ax.set_xlabel(r"$\lambda_2$", fontsize=16)
+        ax.set_ylabel(ylabel, fontsize=16)
+        ax.set_title(panel, fontsize=16)
         ax.grid(True, linestyle="--", alpha=0.3)
 
         if metric == "P_block":
             ax.set_yscale("log")
 
         if idx == 0:
-            ax.legend(fontsize=11, loc="upper left")
+            ax.legend(fontsize=12, loc="upper left")
 
     fig.suptitle(
-        rf"($K={K},\ \lambda_1={int(LAM1)},\ p={P},"
+        rf"$K={K},\ \lambda_1={int(LAM1)},\ p={P},"
         rf"\ \mu_1^{{\rm rand}}={MU1_RAND},"
         rf"\ \mu_2^{{\rm rand}}={MU2_RAND},"
         rf"\ \mu_1^{{\rm zip}}={MU1_ZIP},"
-        rf"\ \mu_2^{{\rm zip}}={MU2_ZIP}$)",
-        fontsize=11,
+        rf"\ \mu_2^{{\rm zip}}={MU2_ZIP}$",
+        fontsize=16,
         y=1.02,
     )
 
