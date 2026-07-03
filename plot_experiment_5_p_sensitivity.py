@@ -331,7 +331,7 @@ def _plot_lam1_max_heatmap(
     ax.set_xlabel("$p$", fontsize=16)
     ax.set_ylabel("Threshold $m$", fontsize=16)
     ax.set_title(
-        f"(K={K}, λ2={LAM2})",
+        f"K={K}, λ2={LAM2}",
         fontsize=16,
     )
 
