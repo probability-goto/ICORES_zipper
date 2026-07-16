@@ -200,15 +200,15 @@ def main():
         ax.set_xlim(-0.02, 1.02)
         ax.grid(True, linestyle="--", alpha=0.3)
 
-    # 凡例は左端パネル (低負荷) のみ
-    handles, labs = axes[0].get_legend_handles_labels()
-    axes[0].legend(
-        handles, labs,
-        loc="upper right",
-        fontsize=12,
-        title=r"Threshold $m$",
-        title_fontsize=12,
-    )
+        # 各パネルに m の凡例を表示
+        handles, labs = ax.get_legend_handles_labels()
+        ax.legend(
+            handles, labs,
+            loc="lower right",
+            fontsize=12,
+            title=r"Threshold $m$",
+            title_fontsize=12,
+        )
 
     fig.suptitle(
         f"K={K}, $\\lambda_2$={LAM2}, $\\mu_{{1,\\mathrm{{rand}}}}$={MU1_RAND}, "
